@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any, cast
 import yaml
 
 CONFIG_FILE = Path("config.yaml")
@@ -15,49 +16,60 @@ def ask(text: str) -> bool:
         except (KeyboardInterrupt, EOFError):
             print("\nOperation cancelled by user.")
             return False
+        
+def read_config_file(file_path: Path) -> dict[str, Any]:
+    try:
+        with open(file_path, "r", encoding="utf-8") as file_stream:
+            config_data = yaml.safe_load(file_stream)
+            return cast(dict[str, Any], config_data) if isinstance(config_data, dict) else {}
+    except (yaml.YAMLError, OSError):
+        return {}
 
-def get_config_vars():
-    # Если файла нет — создаем его (используем логику из прошлого шага)
-    # ... (код создания файла) ...
+def save_config_file(file_path: Path, config_data: dict[str, Any]) -> bool:
+    try:
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(file_path, "w", encoding="utf-8") as file_stream:
+            yaml.safe_dump(config_data, file_stream, allow_unicode=True, sort_keys=False)
+        return True
+    except OSError:
+        print(f"Error: Unable to write to config file at {file_path}")
+        return False
+        
+def read(text: str, type: type = int) -> str | int | float | None:
+    while True:
+        try:
+            return type(input(f"{text.rstrip()}: ").strip())
+        except ValueError:
+            print(f"Please enter a valid {type.__name__}.")
+        except (KeyboardInterrupt, EOFError):
+            print("\nOperation cancelled by user.")
+            return None
 
-    with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-        config = yaml.safe_load(f) or {}
-
-    # Возвращаем кортеж значений в строгом порядке
-    return config.get("api_key"), config.get("username")
-
-
-# Вот ваш красивый импорт в одну строку:
-KEY, NAME = get_config_vars()
-
-print(f"Ключ: {KEY}, Имя: {NAME}")
-
-CONFIG_FILE = Path("config.yaml")
-
-def load(is_second: bool = True) -> tuple:
+def load(is_second: bool = True) -> tuple[int, str, int | None]:
     if CONFIG_FILE.exists():
-        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-            config = yaml.safe_load(f) or {}
-            if not all("api_id" in config,"api_hash" in config):
-                raise ValueError("Не всё есть в конфиге")
+        config = read_config_file(CONFIG_FILE)
+        if "api_id" in config and "api_hash" in config:
             return (config.get("api_id"), config.get("api_hash"), config.get("count"))
+        print("Config file is missing required fields")
     if is_second:
         raise FileExistsError("Сначала запустите prepare.py")
     print("Введите из my.telegram.org")
 
     config = {
-        "api_id": input("Api key: ").strip(),
-        "api_hash": input("Api hash: ").strip(),
+        "api_id": read("Api key: ", int),
+        "api_hash": read("Api hash: ", str),
     }
 
-    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-        yaml.safe_dump(config, f, allow_unicode=True, sort_keys=False)
+    save_config_file(CONFIG_FILE, config)
 
-    return (config.get("api_id"), config.get("api_hash"), config.get("count"))
+    return (config.get("api_id"), config.get("api_hash"), None)
 
-def save(api_id: int, api_hash: str, )
+def save(api_id: int, api_hash: str, count: int | None = None) -> None:
+    config = {
+        "api_id": api_id,
+        "api_hash": api_hash,
+    }
+    if count is not None:
+        config["count"] = count
 
-
-if __name__ == "__main__":
-    user_config = load_or_create_config()
-    print(f"Данные в коде: {user_config}")
+    save_config_file(CONFIG_FILE, config)
