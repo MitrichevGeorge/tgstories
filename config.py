@@ -45,31 +45,24 @@ def read(text: str, type: type = int) -> str | int | float | None:
             print("\nOperation cancelled by user.")
             return None
 
-def load(is_second: bool = True) -> tuple[int, str, int | None]:
+def load() -> tuple[int, str, int]:
     if CONFIG_FILE.exists():
         config = read_config_file(CONFIG_FILE)
-        if "api_id" in config and "api_hash" in config:
-            return (config.get("api_id"), config.get("api_hash"), config.get("count"))
-        print("Config file is missing required fields")
-    if is_second:
-        raise FileExistsError("Сначала запустите prepare.py")
-    print("Введите из my.telegram.org")
+        if "count" in config:
+            if not ("api_id" in config and "api_hash" in config):
+                print("Введите значения из my.telegram.org")
+                config["api_id"] = read("Api key: ", int)
+                config["api_hash"] = read("Api hash: ", str)
+                if config["api_id"] is None or config["api_hash"] is None:
+                    raise KeyboardInterrupt("Настройка прервана пользователем.")
+                save_config_file(CONFIG_FILE, config)
+            return (int(config["api_id"]), str(config["api_hash"]), int(config["count"]))
+    raise FileExistsError("Сначала запустите prepare.py")
 
-    config = {
-        "api_id": read("Api key: ", int),
-        "api_hash": read("Api hash: ", str),
-    }
-
-    save_config_file(CONFIG_FILE, config)
-
-    return (config.get("api_id"), config.get("api_hash"), None)
-
-def save(api_id: int, api_hash: str, count: int | None = None) -> None:
-    config = {
-        "api_id": api_id,
-        "api_hash": api_hash,
-    }
-    if count is not None:
-        config["count"] = count
-
+def save(count: int, api_id: int | None = None, api_hash: str | None = None) -> None:
+    config = read_config_file(CONFIG_FILE)
+    config["count"] = count
+    if api_id and api_hash:
+        config["api_id"] = api_id
+        config["api_hash"] = api_hash      
     save_config_file(CONFIG_FILE, config)
