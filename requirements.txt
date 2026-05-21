@@ -1,0 +1,6 @@
+pillow
+hydrogram
+pyyaml
+tgcrypto
+requests
+tqdm

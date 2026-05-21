@@ -51,16 +51,19 @@ def load() -> tuple[int, str, int]:
         if "count" in config:
             if not ("api_id" in config and "api_hash" in config):
                 print("Введите значения из my.telegram.org")
-                config["api_id"] = read("Api key: ", int)
-                config["api_hash"] = read("Api hash: ", str)
+                config["api_id"] = read("Api id", int)
+                config["api_hash"] = read("Api hash", str)
                 if config["api_id"] is None or config["api_hash"] is None:
                     raise KeyboardInterrupt("Настройка прервана пользователем.")
                 save_config_file(CONFIG_FILE, config)
             return (int(config["api_id"]), str(config["api_hash"]), int(config["count"]))
     raise FileExistsError("Сначала запустите prepare.py")
 
-def save(count: int, api_id: int | None = None, api_hash: str | None = None) -> None:
-    config = read_config_file(CONFIG_FILE)
+def save(count: int, api_id: int | None = None, api_hash: str | None = None, reset: bool = False) -> None:
+    if reset:
+        config = {}
+    else:
+        config = read_config_file(CONFIG_FILE)
     config["count"] = count
     if api_id and api_hash:
         config["api_id"] = api_id
