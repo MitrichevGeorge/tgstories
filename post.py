@@ -93,6 +93,8 @@ async def main():
             print("Готово! История успешно опубликована.")
             if ask("Выйти?"):
                 await app.log_out()
+                if Path("my_account.session").exists():
+                    Path("my_account.session").unlink()
                 print("Выход совершён")
     
     except AuthKeyUnregistered:

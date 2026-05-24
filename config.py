@@ -52,8 +52,10 @@ def load() -> tuple[int, str, int]:
             if not ("api_id" in config and "api_hash" in config):
                 print("Введите значения из my.telegram.org")
                 config["api_id"] = read("Api id", int)
+                if config["api_id"] is None:
+                    raise KeyboardInterrupt("Настройка прервана пользователем.")
                 config["api_hash"] = read("Api hash", str)
-                if config["api_id"] is None or config["api_hash"] is None:
+                if config["api_hash"] is None:
                     raise KeyboardInterrupt("Настройка прервана пользователем.")
                 save_config_file(CONFIG_FILE, config)
             return (int(config["api_id"]), str(config["api_hash"]), int(config["count"]))
