@@ -10,16 +10,15 @@ from hydrogram.raw import functions, types
 from hydrogram.errors.exceptions.unauthorized_401 import AuthKeyUnregistered
 from config import load, save, ask
 
-API_ID = 0
-API_HASH = ""
-COUNT = 0
-SESSION = "my_account"
-
-proxy_settings = {
+SESSION_NAME = "my_account"
+PROXY_SETTINGS = {
     "scheme": "socks5",
     "hostname": "127.0.0.1",
     "port": 10801
 }
+
+INT64_MIN = -9223372036854775808
+INT64_MAX = 9223372036854775807
 
 
 @dataclass
@@ -41,16 +40,16 @@ class ProxyConfig:
         except requests.RequestException:
             return False
 
-def prepare():
+def load_valid_conf() -> tuple[int, str, int]:
     if not Path("part").exists():
         print("Папка отсутствует")
         exit(1)
     try:
-        API_ID, API_HASH, COUNT = load()
-        for i in range(COUNT):
+        api_id, api_hash, count = load()
+        for i in range(count):
             if not Path(f"part/{i}.jpg").exists():
-                raise FileExistsError()
-        return API_ID, API_HASH, COUNT
+                raise FileExistsError(f"Файл part/{i}.jpg не найден")
+        return api_id, api_hash, count
     except FileExistsError:
         print("Сначала запустите prepare.py")
         exit(1)
@@ -59,15 +58,16 @@ def prepare():
         exit(1)
 
 async def main():
-    API_ID, API_HASH, COUNT = prepare()
-    if not ProxyConfig(**proxy_settings).is_working():
+    api_id, api_hash, count = load_valid_conf()
+    if not ProxyConfig(**PROXY_SETTINGS).is_working():
         print("Запустите прокси")
         exit(1)
+
     app = Client(
-        SESSION,
-        api_id=API_ID,
-        api_hash=API_HASH,
-        proxy=proxy_settings
+        SESSION_NAME,
+        api_id=api_id,
+        api_hash=api_hash,
+        proxy=PROXY_SETTINGS
     ) 
 
     try:
@@ -76,21 +76,23 @@ async def main():
             
             media = []
             print("Загрузка медиафайла...")
-            for i in tqdm(range(COUNT-1,-1,-1)):
+            for i in tqdm(range(count-1,-1,-1)):
                 file = f'part/{i}.jpg'
                 uploaded_file = await app.save_file(file)
                 media.append(types.InputMediaUploadedPhoto(file=uploaded_file))
-        
+
+            print("Публикация сторисов...")
+            peer = await app.resolve_peer("me")
             for i in tqdm(media):
-                result = await app.invoke(
+                await app.invoke(
                     functions.stories.SendStory(
-                        peer=await app.resolve_peer("me"),
+                        peer=peer,
                         media=i,
                         privacy_rules=[types.InputPrivacyValueAllowAll()],
-                        random_id=random.randint(-9223372036854775808, 9223372036854775807)
+                        random_id=random.randint(INT64_MIN, INT64_MAX)
                     )
                 )
-            print("Готово! История успешно опубликована.")
+            print("Готово!")
             if ask("Выйти?"):
                 await app.log_out()
                 if Path("my_account.session").exists():
@@ -98,7 +100,7 @@ async def main():
                 print("Выход совершён")
     
     except AuthKeyUnregistered:
-        print("Устаревшая / заверённая сессия")
+        print("Устаревшая / завершённая сессия")
         if Path("my_account.session").exists():
             Path("my_account.session").unlink()
     except EOFError:

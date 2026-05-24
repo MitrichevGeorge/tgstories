@@ -1,3 +1,4 @@
+from __future__ import annotations
 from PIL import Image, UnidentifiedImageError
 from math import ceil
 from pathlib import Path
@@ -48,7 +49,7 @@ def readable_size(size: int) -> str:
             if unit == 'B':
                 return f"{size} {unit}"
             return f"{size:.2f} {unit}"
-        size /= 1024.0
+        size = int(size / 1024.0)
     return f"{size:.2f} PB"
 
 file_path = get_file_name()
@@ -56,7 +57,7 @@ if not file_path:
     exit(1)
 
 try:
-    img = Image.open(file_path)
+    img: Image.Image = Image.open(file_path)
 except UnidentifiedImageError:
     print("Файл не является допустимым изображением.")
     exit(1)
@@ -96,7 +97,7 @@ if img.size[1] % EACH_HEIGHT < EACH_HEIGHT // 3:
 total_images = vertical_count * 3
 count, total_bytes = 0, 0
 
-with tqdm(total=total_images, desc="Прогресс") as pbar:
+with tqdm(total=total_images) as pbar:
     for y in range(vertical_count):
         for x in range(3):
             path = SAVE_PATH / f"{count}.jpg"

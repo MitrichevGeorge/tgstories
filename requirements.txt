@@ -1,7 +1,9 @@
 pillow
 hydrogram
 pyyaml
+types-PyYAML
 tgcrypto
 requests
 tqdm
+types-tqdm
 prompt_toolkit
